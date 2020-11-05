@@ -1,18 +1,9 @@
+# para o processamento dos dados
 import MyUtil
 from collections import defaultdict
 
 FILE_NAME = 'docentes.xlsx'
 PATH = '/home/joaomello/Documentos/USP/IC - Analise de Dados/Arquitetura/dados_arquitetura_2017/'
-
-
-def read_programas():
-    registers = MyUtil.read_file('programas.xlsx', path=PATH)
-    return {row[3]: row[8] for row in registers}
-
-
-def read_programas_nivel():
-    registers = MyUtil.read_file('relatorio.xlsx')
-    return {row[0]: f'{row[3]}-{row[6]}' for row in registers}
 
 
 def get_docentes():
@@ -49,13 +40,12 @@ def get_docentes_programa(p_code):
             names_categories[docente['name']] = 'BOTH'
 
     docentes_programa = {'PERMANENTE': 0, 'COLABORADOR': 0, 'total': 0}
-    for category in names_categories.values():
+    for category in names_categories.values():  # ignora os nomes, apenas considera as categorias
         if category in ('PERMANENTE', 'COLABORADOR'):
             docentes_programa[category] += 1
         else:  # ambas as categorias
             docentes_programa['PERMANENTE'] += 0.5
             docentes_programa['COLABORADOR'] += 0.5
-        docentes_programa['total'] += 0
 
     return docentes_programa
 
@@ -89,36 +79,62 @@ def get_docentes_programas(docentes):
     return doc_prog
 
 
-def sort_data(to_sort):
+def make_chart(chart_data):
     """
-    Função que ordena dados com base em um campo
-    :param to_sort: o dicionário a der ordenado
-    :return: o dicionŕaio ordenado
+    Monta o gráfico com base nos dados
+    :param chart_data: dadaos para a elaboraçõa do gráfico
+    :return: none
     """
-    codes = list(to_sort.keys())
+    import plotly.offline as py
+    import plotly.graph_objs as go
 
-    for i in range(1, len(codes)):
-        j = i
-        new_code = codes[i]
-        while j > 0 and (to_sort[codes[j - 1]]['total'] > to_sort[new_code]['total'] or
-                         (to_sort[codes[j - 1]]['total'] == to_sort[new_code]['total'] and
-                          to_sort[codes[j - 1]]['PERMANENTE'] > to_sort[new_code]['PERMANENTE'])):
-            codes[j] = codes[j - 1]
-            j -= 1
-        codes[j] = new_code
+    trace_perm = go.Bar(x=list(chart_data.keys()),
+                        y=[f_d['PERMANENTE'] for f_d in chart_data.values()],
+                        name='PERMANENTE',
+                        marker={'color': '#FF0000'})
 
-    sorted_data = [{key: value for key, value in to_sort[code].items()} for code in codes]
-    for i in range(len(sorted_data)):
-        sorted_data[i]['code'] = codes[i]
+    trace_colab = go.Bar(x=list(chart_data.keys()),
+                         y=[f_d['COLABORADOR'] for f_d in chart_data.values()],
+                         name='COLABORADOR',
+                         marker={'color': '#0000FF'})
 
-    return sorted_data
+    data = [trace_perm, trace_colab]
+
+    title = {
+        'text': 'Médias de Docentes Permanentes e Colaboradores',
+        'x': 0.5,
+        'xanchor': 'center',
+        'font': {
+            'color': '#000000',
+            'size': 20
+        }
+    }
+
+    subtitle = {
+        'font': {'color': '#000000'},
+        'orientation': 'h',
+        'x': 0,
+        'y': 1
+    }
+
+    layout = go.Layout(title=title,
+                       xaxis={'title': 'Instituição'},
+                       barmode='stack',
+                       legend=subtitle)
+    fig = go.Figure(data=data, layout=layout)
+    py.iplot(fig)
+
+
+def sort_dict(dict_to_sort):
+    sorted_dict = {value[0]: value[1] for value in sorted(dict_to_sort.items(), key=lambda item: item[1]['PERMANENTE'])}
+    return {value[0]: value[1] for value in sorted(sorted_dict.items(), key=lambda item: item[1]['total'])}
 
 
 all_registers = MyUtil.read_file(FILE_NAME, PATH)
 list_docentes = get_docentes()
 
-programas_nivel = read_programas_nivel()
-programas = read_programas()
+programas_nivel = MyUtil.read_programas_nivel()
+programas = MyUtil.read_programas(PATH)
 
-docentes_programas = get_docentes_programas(list_docentes)
-final_data = sort_data(docentes_programas)
+docentes_programas = sort_dict(get_docentes_programas(list_docentes))
+make_chart(docentes_programas)

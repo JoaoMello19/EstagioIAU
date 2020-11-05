@@ -1,4 +1,5 @@
 import MyUtil
+import MyClasses
 
 
 def join_same_productions(registers):
@@ -20,7 +21,7 @@ def join_same_productions(registers):
 def convert_to_object(to_convert):
     obj_productions = list()
     for production in to_convert:
-        new_prod = MyUtil.Producao(*production[0][:16])
+        new_prod = MyClasses.Producao(*production[0][:16])
 
         for prod in production:
             if prod[16] != '':  # detalhamento

@@ -1,7 +1,9 @@
-import MyUtil
-from collections import defaultdict, OrderedDict
+import plotly.offline as py
+import plotly.graph_objs as go
 
-FILE_NAME = 'docentes.xlsx'
+import MyUtil
+from collections import defaultdict
+
 PATH = '/home/joaomello/Documentos/USP/IC - Analise de Dados/Arquitetura/dados_arquitetura_2017/'
 
 
@@ -16,20 +18,12 @@ def read_trabalhos():
     return trabalhos
 
 
-def get_formandos_by(trabalhos, t_formandos):
-    result = defaultdict(lambda: list())
-    for code in trabalhos:
-        if len(trabalhos[code][t_formandos]) > 0:
-            result[code] = [trabalho for trabalho in trabalhos[code][t_formandos]]
-    return result
-
-
-def get_docentes():
+def read_docentes():
     """
     Função que recupera e processa os dados de interesse
     :return: um dicionario, com os dados de interesse
     """
-    registers = MyUtil.read_file(FILE_NAME, PATH)
+    registers = MyUtil.read_file('docentes.xlsx', PATH)
 
     docentes = defaultdict(lambda: list())
     for row in registers:
@@ -91,21 +85,19 @@ def get_docentes_programas(docentes):
     return doc_prog
 
 
+def get_formandos_by(trabalhos, t_formandos):
+    result = defaultdict(lambda: list())
+    for code in trabalhos:
+        if len(trabalhos[code][t_formandos]) > 0:
+            result[code] = [autor for autor in trabalhos[code][t_formandos]]
+    return result
+
+
 def get_docentes_by(d_programas, categoria):
     if categoria in ('PERMANENTE', 'COLABORADOR'):
         return {code: d_programas[code][categoria] for code in d_programas.keys()}
     else:
         return {code: d_programas[code]['total'] for code in d_programas.keys()}
-
-
-def read_programas():
-    registers = MyUtil.read_file('programas.xlsx', path=PATH)
-    return {row[3]: row[8] for row in registers}
-
-
-def read_programas_nivel():
-    registers = MyUtil.read_file('relatorio.xlsx')
-    return {row[0]: f'{row[3]}-{row[6]}' for row in registers}
 
 
 def get_formandos_docentes(trabalhos, t_formandos, docentes, t_docentes='total'):
@@ -125,31 +117,45 @@ def get_formandos_docentes(trabalhos, t_formandos, docentes, t_docentes='total')
     return formandos_docentes
 
 
-def sort_data(to_sort):
-    codes = list(to_sort.keys())
+def make_chart(chart_data, chart_title):
+    data = [go.Bar(x=[code for code in chart_data.keys()],
+                   y=[value for value in chart_data.values()],
+                   marker={'color': '#0000FF'})]
 
-    for i in range(1, len(codes)):
-        j = i
-        new_code = codes[i]
-        while j > 0 and to_sort[codes[j - 1]] > to_sort[new_code]:
-            codes[j] = codes[j - 1]
-            j -= 1
-        codes[j] = new_code
+    title = {
+        'text': chart_title,
+        'x': 0.5,
+        'xanchor': 'center',
+        'font': {
+            'color': '#000000',
+            'size': 20
+        }
+    }
 
-    sorted_data = OrderedDict()
-    for code in codes:
-        sorted_data[code] = to_sort[code]
-    return sorted_data
+    layout = go.Layout(title=title,
+                       xaxis={'title': 'Instituição'},
+                       barmode='stack')
+    fig = go.Figure(data=data, layout=layout)
+    py.iplot(fig)
 
+
+def sort_dict(dict_to_sort):
+    return {value[0]: value[1] for value in sorted(dict_to_sort.items(), key=lambda item: item[1])}
+
+
+programas = MyUtil.read_programas(PATH)
+programas_nivel = MyUtil.read_programas_nivel()
 
 list_trabalhos = read_trabalhos()
-list_docentes = get_docentes()
+list_docentes = read_docentes()
 docentes_programas = get_docentes_programas(list_docentes)
 
-programas = read_programas()
-programas_nivel = read_programas_nivel()
+doutores_docente = sort_dict(get_formandos_docentes(list_trabalhos, 'doutores', docentes_programas))
+doutores_permanente = sort_dict(get_formandos_docentes(list_trabalhos, 'doutores', docentes_programas, 'PERMANENTE'))
+mestres_docente = sort_dict(get_formandos_docentes(list_trabalhos, 'mestres', docentes_programas))
+mestres_permanente = sort_dict(get_formandos_docentes(list_trabalhos, 'mestres', docentes_programas, 'PERMANENTE'))
 
-doutores_docente = sort_data(get_formandos_docentes(list_trabalhos, 'TESE', docentes_programas))
-doutores_permanente = sort_data(get_formandos_docentes(list_trabalhos, 'TESE', docentes_programas, 'PERMANENTE'))
-mestres_docente = sort_data(get_formandos_docentes(list_trabalhos, 'DISSERTAÇÃO', docentes_programas))
-mestres_permanente = sort_data(get_formandos_docentes(list_trabalhos, 'DISSERTAÇÃO', docentes_programas, 'PERMANENTE'))
+make_chart(doutores_docente, 'Doutores por Docente')
+make_chart(doutores_permanente, 'Doutores por Docente Permanente')
+make_chart(mestres_docente, 'Mestres por Docente')
+make_chart(mestres_permanente, 'Mestres por Docente Permanente')

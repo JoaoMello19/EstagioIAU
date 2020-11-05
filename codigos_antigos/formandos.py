@@ -1,15 +1,13 @@
-import MyUtil
+import plotly.offline as py
+import plotly.graph_objs as go
+
+import MyUtil, MyClasses
 from collections import defaultdict
 
 PATH = '/home/joaomello/Documentos/USP/IC - Analise de Dados/Arquitetura/dados_arquitetura_2017/'
 COLORS = {'total': '#0000ff', 'publicacao': '#00FF00', 'periodico': '#FF0000', 'primeiro_autor': '#FFFF00'}
-TITLES = {'total': '', 'publicacao': 'com Publicação',
-          'periodico': 'com Periódico', 'primeiro_autor': 'com Periódico como Primeiro Autor'}
-
-
-def read_programas():
-    registers = MyUtil.read_file('relatorio.xlsx')
-    return {row[0]: f'{row[3]}-{row[6]}' for row in registers}
+TITLES = {'total': '', 'publicacao': 'com Publicação', 'periodico': 'com Periódico',
+          'primeiro_autor': 'com Periódico como Primeiro Autor'}
 
 
 def read_trabalhos():
@@ -17,6 +15,7 @@ def read_trabalhos():
     trabalhos = defaultdict(lambda: defaultdict(lambda: set()))
 
     for row in registers:
+        # trabalhos[code][tipo].add(autor)
         trabalhos[row[3]][row[10]].add(row[9])
 
     return trabalhos
@@ -24,11 +23,11 @@ def read_trabalhos():
 
 def read_producao(file_name):
     producoes = list()
-    with open(PATH + file_name) as file:
+    with open(PATH + file_name) as file:    # abre o .tsv
         for row in file:
             cells = str(row).split('\t')
-            producao = MyUtil.Periodico(*cells[:32]) if 'periodicos' in file_name \
-                else MyUtil.Conferencias(*cells[:32])
+            producao = MyClasses.Periodico(*cells[:32]) if 'periodicos' in file_name \
+                else MyClasses.Conferencias(*cells[:32])
             producao.add_authors(*cells[32:-1])
             producoes.append(producao)
     del producoes[0]
@@ -39,7 +38,7 @@ def get_by_type(trabalhos, tipo):
     result = defaultdict(lambda: list())
     for code in trabalhos:
         if len(trabalhos[code][tipo]) > 0:
-            result[code] = [trabalho for trabalho in trabalhos[code][tipo]]
+            result[code] = [autor for autor in trabalhos[code][tipo]]
     return result
 
 
@@ -81,35 +80,60 @@ def get_formandos(trabalhos, tipo):
     })
 
     for code in formandos.keys():
-        tipos_formandos[programas[code]]['total'] += count_formandos[code]
-        tipos_formandos[programas[code]]['publicacao'] += formandos_publicacao[code]
-        tipos_formandos[programas[code]]['periodico'] += formandos_periodico[code]
-        tipos_formandos[programas[code]]['primeiro_autor'] += formandos_periodico_primeiro[code]
+        new_code = code
+        if code in programas_nivel.keys():
+            new_code = programas_nivel[code]
+        elif code in programas.keys():
+            new_code = programas[code]
+
+        tipos_formandos[new_code]['total'] += count_formandos[code]
+        tipos_formandos[new_code]['publicacao'] += formandos_publicacao[code]
+        tipos_formandos[new_code]['periodico'] += formandos_periodico[code]
+        tipos_formandos[new_code]['primeiro_autor'] += formandos_periodico_primeiro[code]
 
     return tipos_formandos
 
 
-def sort_data(to_sort):
-    sorted_data = list()
-    for code in to_sort:
-        sorted_data.append({key: value for key, value in to_sort[code].items()})
-        sorted_data[-1]['code'] = code
+def make_chart(chart_data, chart_title):
+    data = list()
+    aux_label = 'Doutor' if 'Doutores' in chart_title else 'Mestre'
+    for dado in ('primeiro_autor', 'periodico', 'publicacao', 'total'):
+        data.append(go.Bar(x=list(chart_data.keys()),
+                           y=[d_f[dado] for d_f in chart_data.values()],
+                           marker_color=COLORS[dado],
+                           name=f'{aux_label} {TITLES[dado]}'))
 
-    for i in range(1, len(sorted_data)):
-        j = i
-        new_value = sorted_data[i]
+    title = {
+        'text': chart_title,
+        'x': 0.5,
+        'xanchor': 'center',
+        'font': {
+            'color': '#000000',
+            'size': 20
+        }
+    }
 
-        while j > 0 and sorted_data[j - 1]['total'] > new_value['total']:
-            sorted_data[j] = sorted_data[j - 1]
-            j -= 1
+    legend = {
+        'font': {'color': '#000000'},
+        'orientation': 'v',
+        'x': 0,
+        'y': 1
+    }
 
-        sorted_data[j] = new_value
+    layout = go.Layout(title=title,
+                       xaxis={'title': 'Instituição'},
+                       legend=legend)
 
-    return sorted_data
+    fig = go.Figure(data=data, layout=layout)
+    py.iplot(fig)
 
 
-# porgrmas
-programas = read_programas()
+def sort_dict(dict_to_sort):
+    return {value[0]: value[1] for value in sorted(dict_to_sort.items(), key=lambda item: item[1]['total'])}
+
+
+programas = MyUtil.read_programas(PATH)
+programas_nivel = MyUtil.read_programas_nivel()
 
 # trabalhos de conclusao
 list_trabalhos = read_trabalhos()
@@ -126,5 +150,9 @@ autores_periodicos = get_autores(periodicos)
 primeiros_autores_periodicos = get_primeiros_autores(periodicos)
 
 # dados agrupados
-doutores_formandos = sort_data(get_formandos(list_trabalhos, 'doutores'))
-mestres_formandos = sort_data(get_formandos(list_trabalhos, 'mestres'))
+doutores_formandos = sort_dict(get_formandos(list_trabalhos, 'doutores'))
+
+mestres_formandos = sort_dict(get_formandos(list_trabalhos, 'mestres'))
+
+make_chart(doutores_formandos, 'Doutores Formandos')
+make_chart(mestres_formandos, 'Mestres Formandos')

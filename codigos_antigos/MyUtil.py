@@ -1,131 +1,47 @@
-import csv
-import zipfile
-from bs4 import BeautifulSoup
-from collections import defaultdict, OrderedDict
-from openpyxl import load_workbook
+def get_initials(prog_name):
+    words = prog_name.split(" ")
+    if len(words) > 1:
+        return "".join([word[0] for word in words if len(word) > 0])
+    return prog_name[0]
 
 
-class Producao:
-    def __init__(self, *args):
-        self.calendario, self.ano_calendario, self.data_hora_envio, self.codigo_ppg, self.nome_ppg, \
-            self.area_avaliacao, self.sigla_ies, self.nome_ies, self.ano_producao, self.titulo_producao, \
-            self.producao_glosada, self.tipo_producao, self.subtipo_producao, self.area_concentracao, \
-            self.linha_pesquisa, self.projeto_pesquisa = args
-
-        self.calendario = convert_ascii(self.calendario)
-        self.nome_ppg = convert_ascii(self.nome_ppg)
-        self.area_avaliacao = convert_ascii(self.area_avaliacao)
-        self.nome_ies = convert_ascii(self.nome_ies)
-        self.titulo_producao = convert_ascii(self.titulo_producao)
-        self.producao_glosada = convert_ascii(self.producao_glosada)
-        self.tipo_producao = convert_ascii(self.tipo_producao)
-        self.subtipo_producao = convert_ascii(self.subtipo_producao)
-        self.area_concentracao = convert_ascii(self.area_concentracao)
-        self.linha_pesquisa = convert_ascii(self.linha_pesquisa)
-        self.projeto_pesquisa = convert_ascii(self.projeto_pesquisa)
-
-        self.detalhamentos = defaultdict(lambda: '')  # nome_detalhamento: detalhamento
-        self.autores = OrderedDict()  # nome_autor: ordem_autor (mantem a ordem)
-
-    def add_detalhamento(self, nome, valor):
-        self.detalhamentos[convert_ascii(nome)] = convert_ascii(valor)
-
-    def add_autor(self, nome, categoria, ordem):
-        self.autores[convert_ascii(nome)] = {
-            'categoria': convert_ascii(categoria),
-            'ordem': int(ordem)
-        }
-
-    def get_attributes(self):
-        return self.calendario, self.ano_calendario, self.data_hora_envio, self.codigo_ppg, self.nome_ppg, \
-               self.area_avaliacao, self.sigla_ies, self.nome_ies, self.ano_producao, self.titulo_producao, \
-               self.producao_glosada, self.tipo_producao, self.subtipo_producao, self.area_concentracao, \
-               self.linha_pesquisa, self.projeto_pesquisa
-
-    def to_string(self):
-        return f'''calendario = {self.calendario} 
-ano_calendario = {self.ano_calendario} 
-data_hora_envio = {self.data_hora_envio} 
-codigo_ppg = {self.codigo_ppg} 
-nome_ppg = {self.nome_ppg} 
-area_avaliacao = {self.area_avaliacao} 
-sigla_ies = {self.sigla_ies} 
-nome_ies = {self.nome_ies} 
-ano_producao = {self.ano_producao} 
-titulo_producao = {self.titulo_producao} 
-producao_glosada = {self.producao_glosada} 
-tipo_producao = {self.tipo_producao} 
-subtipo_producao = {self.subtipo_producao} 
-area_concentracao = {self.area_concentracao} 
-linha_pesquisa = {self.linha_pesquisa} 
-projeto_pesquisa = {self.projeto_pesquisa}
-detalhamentos = {self.detalhamentos}
-autores = {self.autores}\n'''
+def read_programas(path):
+    registers = read_file('programas.xlsx', path=path)
+    return {row[3]: f'{row[8]}-{get_initials(row[4])}' for row in registers}
 
 
-class Periodico:
-    def __init__(self, *args):
-        self.calendario, self.ano_calendario, self.data_hora_envio, self.codigo_ppg, self.nome_ppg, \
-            self.area_avaliacao, self.sigla_ies, self.nome_ies, self.ano_producao, self.titulo_producao, \
-            self.producao_glosada, self.tipo_producao, self.subtipo_producao, self.area_concentracao, \
-            self.linha_pesquisa, self.projeto_pesquisa, self.cidade, self.doi, self.divulgacao, self.fasciculo, \
-            self.issn_titulo_periodico, self.idioma, self.natureza, self.nome_editora, self.numero_pagina_final, \
-            self.numero_pagina_incial, self.numero_doi, self.observacao, self.serie, self.url, self.url_doi, \
-            self.volume = args
-        self.authors = list()
-
-    def add_authors(self, *authors):
-        self.authors = [{'nome': authors[i], 'categoria': authors[i + 1]} for i in range(0, len(authors), 2)]
-
-    def get_issn(self):
-        return str(self.issn_titulo_periodico).split(' ')[0]
-
-
-class Conferencias:
-    def __init__(self, *args):
-        self.calendario, self.ano_calendario, self.data_hora_envio, self.codigo_ppg, self.nome_ppg, \
-            self.area_avaliacao, self.sigla_ies, self.nome_ies, self.ano_producao, self.titulo_producao, \
-            self.producao_glosada, self.tipo_producao, self.subtipo_producao, self.area_concentracao, \
-            self.linha_pesquisa, self.projeto_pesquisa, self.cidade_evento, self.divulgacao, self.edicao_numero, \
-            self.fasciculo, self.isbn_issn, self.idioma, self.natureza, self.nome_evento, self.numero_pagina_final, \
-            self.numero_pagina_inicial, self.observacao, self.pais, self.serie, self.titulo_anais, self.url, \
-            self.volume, = args
-        self.authors = list()
-
-    def add_authors(self, *authors):
-        self.authors = [{'nome': authors[i], 'categoria': authors[i + 1]} for i in range(0, len(authors), 2)]
-
-    def get_issn(self):
-        return self.isbn_issn if len(self.isbn_issn) == 5 else ''
-
-
-class Quali:
-    def __init__(self, *args):
-        self.issn, self.titulo, self.estrato = [str(arg)[1:-1] for arg in args]
-        self.estrato = self.estrato[:-1]
-
-
-class TrabalhoConclusao():
-    def __init__(self, *args):
-        self.calendario, self.ano_calendario, self.data_hora_envio, self.codigo_ppg, self.nome_ppg, \
-            self.area_avaliacao, self.sigla_ies, self.nome_ies, self.nome_trabalho_conclusao, self.nome_autor, \
-            self.tipo_trabalho_conclusao, self.data_defesa, self.orientador_principal_banca = args
-
-        self.membros_banca = list()
+def read_programas_nivel():
+    registers = read_file('relatorio.xlsx')
+    return {row[0]: f'{row[3]}-{get_initials(row[1])}-{row[6]}' for row in registers}
 
 
 def format_row(row):
+    """
+    Formata uma linha, separando em clunas
+    :param row: a linha, com as tags indicadoras de conteudo
+    :return: uma lista, correspondente a cada campo
+    """
     f_row = list()
     for cell in row:
-        if '</t>' in cell:
+        if '</t>' in cell:  # caso seja uma tag de conteudo
             f_row.append(cell[cell.find('>') + 1:cell.find('</t>')])
+    # f_row = [cell[cell.find('>') + 1:cell.find('</t>')] for cell in row if '</t> in cell']
     return f_row
 
 
 def open_large_xls(file_name, my_sheet, path=''):
+    """
+    Abre arquivos xlsx que são muito grandes
+    :param file_name: nome do arquivo
+    :param my_sheet: folha da planilha que contem os dados
+    :param path: caminho para a planilha
+    :return: uma lista contendo as linhas da planilha
+    """
+    import zipfile
+    from bs4 import BeautifulSoup
+
     paths = []
-    filename = path + file_name
-    file = zipfile.ZipFile(filename, "r")
+    file = zipfile.ZipFile(path + file_name, "r")
 
     for name in file.namelist():
         if name == 'xl/workbook.xml':
@@ -157,10 +73,9 @@ def convert_ascii(string):
              'í': '&#237;', 'ó': '&#243;', 'ô': '&#244;', 'õ': '&#245;', 'ú': '&#250;'}
 
     for char in regex:
-        if '&#' in string:
-            string = string.replace(regex[char], char)
-        else:
+        if '&#' not in string:
             break
+        string = string.replace(regex[char], char)
 
     return string
 
@@ -168,32 +83,30 @@ def convert_ascii(string):
 def read_file(file_name, path=''):
     extension = file_name.split('.')[-1]
     if extension == 'xlsx':
-        return _read_xlsx(file_name, path=path)
+        return read_xlsx(file_name, path=path)
     elif extension == 'csv':
-        return _read_csv(file_name, path=path)
+        return read_csv(file_name, path=path)
     else:
         print('Arquivo não suportado...')
 
 
-def _read_xlsx(file_name, path=''):
-    # print(f'Abrindo {path + file_name}')
-    work_book = load_workbook(path + file_name)  # abrindo o Workbook test.xlsx
-    sheet = work_book.active  # selecionando a planilha ativa
+def read_xlsx(file_name, path=''):
+    from openpyxl import load_workbook
 
-    all_registers = list()  # registros da planilha toda
-    for line in sheet:  # iterando em todas as linhas da planilha
-        register = list()  # registro de uma linha
-        for cell in line:
-            register.append(cell.value)
-        all_registers.append(register)
+    work_book = load_workbook(path + file_name)     # abrindo o Workbook test.xlsx
+    sheet = work_book.active                        # selecionando a planilha ativa
 
-    del all_registers[0]  # remove os titulos
-    work_book.close()  # fecha o arquivo
+    # para cada linha e para cada valor da linha
+    all_registers = [[cell.value for cell in line] for line in sheet]
+
+    del all_registers[0]    # remove os titulos
+    work_book.close()       # fecha o arquivo
     return all_registers
 
 
-def _read_csv(file_name, path=''):
-    # print(f'Abrindo {path + file_name}')
+def read_csv(file_name, path=''):
+    import csv
+
     all_registers = list()
     with open(path + file_name, encoding='ISO-8859-1') as csv_file:
         for row in csv.reader(csv_file):

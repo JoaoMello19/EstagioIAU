@@ -1,4 +1,7 @@
-import MyUtil
+import plotly.offline as py
+import plotly.graph_objs as go
+
+import MyUtil, MyClasses
 from collections import defaultdict
 
 PATH = '/home/joaomello/Documentos/USP/IC - Analise de Dados/Arquitetura/dados_arquitetura_2017/'
@@ -23,7 +26,7 @@ def read_periodicos():
     with open(PATH + 'periodicos.tsv') as file:
         for row in file:
             cells = str(row).split('\t')
-            new_periodico = MyUtil.Periodico(*cells[:32])
+            new_periodico = MyClasses.Periodico(*cells[:32])
             new_periodico.add_authors(*cells[32:-1])
             periodicos.append(new_periodico)
     del periodicos[0]
@@ -35,7 +38,7 @@ def read_conferencias():
     with open(PATH + 'conferencias.tsv') as file:
         for row in file:
             cells = str(row).split('\t')
-            new_conferencia = MyUtil.Conferencias(*cells[:32])
+            new_conferencia = MyClasses.Conferencias(*cells[:32])
             new_conferencia.add_authors(*cells[32:-1])
             conferencias.append(new_conferencia)
     del conferencias[0]
@@ -44,15 +47,9 @@ def read_conferencias():
 
 def read_qualis():
     with open('qualis-2017-2018.tsv') as file:
-        qualis = [MyUtil.Quali(*str(row).split('\t')) for row in file]
+        qualis = [MyClasses.Quali(*str(row).split('\t')) for row in file]
     del qualis[0]
     return qualis
-
-
-def read_programas():
-    registers = MyUtil.read_file('relatorio.xlsx')
-    programas = {row[0]: f'{row[3]}-{row[6]}' for row in registers}
-    return programas
 
 
 def read_docentes():
@@ -68,10 +65,15 @@ def read_docentes():
     return docentes
 
 
-def get_average(docentes):
+def get_docentes_programa(p_code):
+    """
+    Função que avalia e calcula a média de docentes por categoria
+    :param p_code: dicionário com chaves equivalentes ao nomes e valores equivalentes a categoria
+    :return: a média por codigo
+    """
     names_categories = dict()
 
-    for docente in docentes:
+    for docente in p_code:
         if docente['name'] not in names_categories.keys():  # primeira vez que o docente é registrado
             names_categories[docente['name']] = docente['category']
 
@@ -79,39 +81,48 @@ def get_average(docentes):
             # registrado como outra categoria -> pertence a ambas
             names_categories[docente['name']] = 'BOTH'
 
-    average = {'PERMANENTE': 0, 'COLABORADOR': 0}
+    docentes_programa = {'PERMANENTE': 0, 'COLABORADOR': 0, 'total': 0}
     for category in names_categories.values():
         if category in ('PERMANENTE', 'COLABORADOR'):
-            average[category] += 1
+            docentes_programa[category] += 1
         else:  # ambas as categorias
-            average['PERMANENTE'] += 0.5
-            average['COLABORADOR'] += 0.5
+            docentes_programa['PERMANENTE'] += 0.5
+            docentes_programa['COLABORADOR'] += 0.5
+        docentes_programa['total'] += 1
 
-    return average
+    return docentes_programa
 
 
-def get_all_averages(all_docentes):
-    averages = dict()
+def get_docentes_programas(docentes):
+    """
+    Função que calcula todas as médias
+    :param docentes: os dados recolhidos
+    :return: a média individual de cada programa
+    """
+    codes = {code for code in docentes.keys()}
+    doc_prog = defaultdict(lambda: {
+        'PERMANENTE': 0,
+        'COLABORADOR': 0,
+        'total': 0
+    })
 
-    for code in all_docentes.keys():
-        average = get_average(all_docentes[code])
-        averages[code] = {
-            'PERMANENTE': average['PERMANENTE'],
-            'COLABORADOR': average['COLABORADOR'],
-            'total': average['PERMANENTE'] + average['COLABORADOR']
-        }
+    for code in codes:
+        d_programa = get_docentes_programa(docentes[code])
+        doc_prog[code]['PERMANENTE'] += d_programa['PERMANENTE']
+        doc_prog[code]['COLABORADOR'] += d_programa['COLABORADOR']
+        doc_prog[code]['total'] += d_programa['total']
 
-    return averages
+    return doc_prog
 
 
 def get_publicacoes_qualis(publicacoes, qualis):
     publicacoes_qualis = defaultdict(lambda: new_quali_dict())
-    dict_qualis = {quali.issn: quali.estrato for quali in qualis}
+    issn_quali = {quali.issn: quali.estrato for quali in qualis}
 
     for publicacao in publicacoes:
         cod_programa = publicacao.codigo_ppg
         issn = publicacao.get_issn()
-        quali_programa = dict_qualis[issn] if issn in dict_qualis.keys() else 'NA'  # caso nao haja issn
+        quali_programa = issn_quali[issn] if issn in issn_quali.keys() else 'NA'  # caso nao haja issn
         publicacoes_qualis[cod_programa][quali_programa] += 1
         publicacoes_qualis[cod_programa]['total'] += 1
 
@@ -140,48 +151,70 @@ def get_publicacoes_permanente(p_qualis, docentes_programa):
     return ponderado
 
 
-def sort_data(to_sort, programas):
-    grouped = defaultdict(lambda: new_quali_dict())
-    for code in to_sort.keys():
-        if code in programas.keys():
-            sigla = programas[code]
-            for quali in TIPO_QUALIS:
-                grouped[sigla][quali] += to_sort[code][quali]
-            grouped[sigla]['total'] += to_sort[code]['total']
+def get_code(code):
+    new_code = code
+    if code in programas_nivel.keys():
+        new_code = programas_nivel[code]
+    elif code in programas.keys():
+        new_code = programas[code]
+    return new_code
 
-    sorted_data = list()
 
-    for key in grouped.keys():  # converte o dicionario em lista de dicionarios
-        sorted_data.append({k: v for k, v in grouped[key].items()})
-        sorted_data[-1]['code'] = key
+def sort_dict(dict_to_sort):
+    return {get_code(value[0]): value[1] for value in sorted(dict_to_sort.items(), key=lambda item: item[1]['total'])}
 
-    for i in range(len(sorted_data)):
-        j = i
-        new_value = sorted_data[i]
 
-        while j > 0 and sorted_data[j - 1]['total'] > new_value['total']:
-            sorted_data[j] = sorted_data[j - 1]
-            j -= 1
+def make_chart(chart_data, chart_title):
+    data = list()
+    for i in range(0, len(TIPO_QUALIS)):
+        data.append(go.Bar(x=list(chart_data.keys()),
+                           y=[p_quali[TIPO_QUALIS[i]] for p_quali in chart_data.values()],
+                           marker_color=COLOR_QUALIS[TIPO_QUALIS[i]],
+                           name=f'{TIPO_QUALIS[i]} ({PESO_QUALIS[TIPO_QUALIS[i]]})'))
 
-        sorted_data[j] = new_value
+    title = {
+        'text': chart_title,
+        'x': 0.5,
+        'xanchor': 'center',
+        'font': {
+            'color': '#000000',
+            'size': 20
+        }
+    }
 
-    return sorted_data
+    layout = go.Layout(title=title,
+                       xaxis={'title': 'Instituição'},
+                       barmode='stack')
+
+    fig = go.Figure(data=data, layout=layout)
+    py.iplot(fig)
 
 
 # dados lidos
-list_programas = read_programas()
+programas = MyUtil.read_programas(PATH)
+programas_nivel = MyUtil.read_programas_nivel()
 list_periodicos = read_periodicos()
 list_conferencias = read_conferencias()
 list_qualis = read_qualis()
 list_docentes = read_docentes()
 
 # dados processados
-docente_programa = get_all_averages(list_docentes)
+docente_programa = get_docentes_programas(list_docentes)
 
 periodicos_qualis = get_publicacoes_qualis(list_periodicos, list_qualis)
-periodicos_docente = get_publicacoes_docente(periodicos_qualis, docente_programa)
-periodicos_permanente = get_publicacoes_permanente(periodicos_qualis, docente_programa)
+periodicos_docente = sort_dict(get_publicacoes_docente(periodicos_qualis, docente_programa))
+periodicos_permanente = sort_dict(get_publicacoes_permanente(periodicos_qualis, docente_programa))
+periodicos_qualis = sort_dict(periodicos_qualis)  # ordena depois, pois a lista é utilizada em outro método
 
 conferencias_qualis = get_publicacoes_qualis(list_conferencias, list_qualis)
-conferencias_docente = get_publicacoes_docente(conferencias_qualis, docente_programa)
-conferencias_permanente = get_publicacoes_permanente(conferencias_qualis, docente_programa)
+conferencias_docente = sort_dict(get_publicacoes_docente(conferencias_qualis, docente_programa))
+conferencias_permanente = sort_dict(get_publicacoes_permanente(conferencias_qualis, docente_programa))
+conferencias_qualis = sort_dict(conferencias_qualis)  # ordena depois, pois a lista é utilizada em outro método
+
+make_chart(periodicos_qualis, 'Periódicos por Qualis')
+make_chart(periodicos_docente, 'Periódicos por Docentes (Permanentes + Colaboradores)')
+make_chart(periodicos_permanente, 'Periódicos por Docentes Permanentes')
+
+make_chart(conferencias_qualis, 'Conferências por Qualis')
+make_chart(conferencias_docente, 'Conferências por Docentes (Permanentes + Colaboradores)')
+make_chart(conferencias_permanente, 'Conferências por Docentes Permanentes')
