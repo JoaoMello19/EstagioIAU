@@ -3,15 +3,16 @@ import MyUtil
 from collections import defaultdict
 
 FILE_NAME = 'docentes.xlsx'
-PATH = '/home/joaomello/Documentos/USP/IC - Analise de Dados/Arquitetura/dados_arquitetura_2017/'
+PATH = 'dados_arquitetura_'
+ANOS = {'2017', '2018', '2019'}
 
 
-def get_docentes():
+def get_docentes(filepath):
     """
     Função que recupera e processa os dados de interesse
     :return: um dicionario, com os dados de interesse
     """
-    registers = MyUtil.read_file(FILE_NAME, PATH)
+    registers = MyUtil.read_file(FILE_NAME, filepath)
 
     docentes = defaultdict(lambda: list())
     for row in registers:
@@ -130,11 +131,20 @@ def sort_dict(dict_to_sort):
     return {value[0]: value[1] for value in sorted(sorted_dict.items(), key=lambda item: item[1]['total'])}
 
 
-all_registers = MyUtil.read_file(FILE_NAME, PATH)
-list_docentes = get_docentes()
+all_registers=dict()
+list_docentes=dict()
+programas=dict()
+
+#all_registers.update(MyUtil.read_file(FILE_NAME, PATH+ano+'/'))
+for ano in ANOS: 
+    list_docentes_add = get_docentes(PATH+ano+'/')
+    for programa in list_docentes_add:
+        if programa in list_docentes:
+            list_docentes[programa].extend(list_docentes_add[programa])
+        else:
+            list_docentes[programa] = list_docentes_add[programa]
+    programas.update(MyUtil.read_programas(PATH+ano+'/'))
 
 programas_nivel = MyUtil.read_programas_nivel()
-programas = MyUtil.read_programas(PATH)
-
 docentes_programas = sort_dict(get_docentes_programas(list_docentes))
 make_chart(docentes_programas)

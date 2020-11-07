@@ -4,11 +4,11 @@ import plotly.graph_objs as go
 import MyUtil
 from collections import defaultdict
 
-PATH = '/home/joaomello/Documentos/USP/IC - Analise de Dados/Arquitetura/dados_arquitetura_2017/'
+PATH = 'dados_arquitetura_'
+ANOS = {'2013', '2014', '2015', '2016'}
 
-
-def read_trabalhos():
-    registers = MyUtil.read_file('trabalhos_conclusao.xlsx', PATH)
+def read_trabalhos(filepath):
+    registers = MyUtil.read_file('trabalhos_conclusao.xlsx', filepath)
     trabalhos = defaultdict(lambda: defaultdict(lambda: set()))
 
     for row in registers:
@@ -18,12 +18,12 @@ def read_trabalhos():
     return trabalhos
 
 
-def read_docentes():
+def read_docentes(filepath):
     """
     Função que recupera e processa os dados de interesse
     :return: um dicionario, com os dados de interesse
     """
-    registers = MyUtil.read_file('docentes.xlsx', PATH)
+    registers = MyUtil.read_file('docentes.xlsx', filepath)
 
     docentes = defaultdict(lambda: list())
     for row in registers:
@@ -50,6 +50,7 @@ def get_docentes_programa(p_code):
         elif names_categories[docente['name']] not in ('BOTH', docente['category']):
             # registrado como outra categoria -> pertence a ambas
             names_categories[docente['name']] = 'BOTH'
+    
 
     docentes_programa = {'PERMANENTE': 0, 'COLABORADOR': 0, 'total': 0}
     for category in names_categories.values():
@@ -80,7 +81,7 @@ def get_docentes_programas(docentes):
         d_programa = get_docentes_programa(docentes[code])
         doc_prog[code]['PERMANENTE'] += d_programa['PERMANENTE']
         doc_prog[code]['COLABORADOR'] += d_programa['COLABORADOR']
-        doc_prog[code]['total'] += d_programa['total']
+        doc_prog[code]['total'] += d_programa['total']            
 
     return doc_prog
 
@@ -112,6 +113,7 @@ def get_formandos_docentes(trabalhos, t_formandos, docentes, t_docentes='total')
             new_code = programas_nivel[code]
         elif code in programas.keys():
             new_code = programas[code]
+
         formandos_docentes[new_code] += count_formandos[code] / docentes_t[code]
 
     return formandos_docentes
@@ -143,17 +145,40 @@ def sort_dict(dict_to_sort):
     return {value[0]: value[1] for value in sorted(dict_to_sort.items(), key=lambda item: item[1])}
 
 
-programas = MyUtil.read_programas(PATH)
+list_trabalhos=dict()
+list_docentes=dict()
+programas=dict()
+
+for ano in ANOS: 
+    list_docentes_add = read_docentes(PATH+ano+'/')
+    for programa in list_docentes_add:
+        if programa in list_docentes:
+            list_docentes[programa].extend(list_docentes_add[programa])
+        else:
+            list_docentes[programa] = list_docentes_add[programa]
+            
+    list_trabalhos_add = read_trabalhos(PATH+ano+'/')
+    for programa in list_trabalhos_add:
+        if programa in list_trabalhos:
+            list_trabalhos_programa = list_trabalhos_add[programa]
+            for tipo in list_trabalhos_programa:
+                if tipo in list_trabalhos[programa]:
+                    list_trabalhos[programa][tipo].update(list_trabalhos_programa[tipo])
+                else:
+                    list_trabalhos[programa][tipo] = list_trabalhos_programa[tipo]
+        else:
+            list_trabalhos[programa] = list_trabalhos_add[programa]
+    programas.update(MyUtil.read_programas(PATH+ano+'/'))
+    
 programas_nivel = MyUtil.read_programas_nivel()
 
-list_trabalhos = read_trabalhos()
-list_docentes = read_docentes()
 docentes_programas = get_docentes_programas(list_docentes)
 
 doutores_docente = sort_dict(get_formandos_docentes(list_trabalhos, 'doutores', docentes_programas))
 doutores_permanente = sort_dict(get_formandos_docentes(list_trabalhos, 'doutores', docentes_programas, 'PERMANENTE'))
 mestres_docente = sort_dict(get_formandos_docentes(list_trabalhos, 'mestres', docentes_programas))
 mestres_permanente = sort_dict(get_formandos_docentes(list_trabalhos, 'mestres', docentes_programas, 'PERMANENTE'))
+
 
 make_chart(doutores_docente, 'Doutores por Docente')
 make_chart(doutores_permanente, 'Doutores por Docente Permanente')
