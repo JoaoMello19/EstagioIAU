@@ -89,11 +89,6 @@ def write_arq(file_name, titles, details, productions):
         for author in authors:
             result_file.write(f"{author['name']}\t{author['category']}\t")
 
-        '''
-        for i in range(max_authors - len(authors)):
-            result_file.write(f'\t\t')
-        '''
-
         result_file.write('\n')
 
     result_file.close()
@@ -102,7 +97,7 @@ def write_arq(file_name, titles, details, productions):
 # inicio do programa principal
 FILE_NAME = 'producoes_intelectuais.xlsx'
 SHEET_NAME = 'Produção Intelectual'
-PATH = '/home/joaomello/Documentos/USP/IC - Analise de Dados/Arquitetura/dados_arquitetura_2017/'
+PATH = 'dados_arquitetura_2017/'
 
 all_registers = MyUtil.open_large_xls(FILE_NAME, SHEET_NAME, PATH)      # abrindo o arquivo
 
