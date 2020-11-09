@@ -180,7 +180,7 @@ mestres_docente = sort_dict(get_formandos_docentes(list_trabalhos, 'mestres', do
 mestres_permanente = sort_dict(get_formandos_docentes(list_trabalhos, 'mestres', docentes_programas, 'PERMANENTE'))
 
 
-make_chart(doutores_docente, 'Doutores por Docente')
-make_chart(doutores_permanente, 'Doutores por Docente Permanente')
-make_chart(mestres_docente, 'Mestres por Docente')
-make_chart(mestres_permanente, 'Mestres por Docente Permanente')
+make_chart(doutores_docente, f'Doutores por Docente ({", ".join(ANOS)})')
+make_chart(doutores_permanente, f'Doutores por Docente Permanente ({", ".join(ANOS)})')
+make_chart(mestres_docente, f'Mestres por Docente ({", ".join(ANOS)})')
+make_chart(mestres_permanente, f'Mestres por Docente Permanente ({", ".join(ANOS)})')

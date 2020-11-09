@@ -1,10 +1,11 @@
 import plotly.offline as py
 import plotly.graph_objs as go
 
-import MyUtil, MyClasses
+import MyUtil
+import MyClasses
 from collections import defaultdict
 
-PATH = '/home/joaomello/Documentos/USP/IC - Analise de Dados/Arquitetura/dados_arquitetura_2017/'
+PATH = 'dados_arquitetura_2017/'
 COLORS = {'total': '#0000ff', 'publicacao': '#00FF00', 'periodico': '#FF0000', 'primeiro_autor': '#FFFF00'}
 TITLES = {'total': '', 'publicacao': 'com Publicação', 'periodico': 'com Periódico',
           'primeiro_autor': 'com Periódico como Primeiro Autor'}

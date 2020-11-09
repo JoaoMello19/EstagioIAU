@@ -102,7 +102,7 @@ def make_chart(chart_data):
     data = [trace_perm, trace_colab]
 
     title = {
-        'text': 'Médias de Docentes Permanentes e Colaboradores',
+        'text': f'Médias de Docentes Permanentes e Colaboradores ({", ".join(ANOS)})',
         'x': 0.5,
         'xanchor': 'center',
         'font': {
@@ -135,7 +135,7 @@ all_registers=dict()
 list_docentes=dict()
 programas=dict()
 
-#all_registers.update(MyUtil.read_file(FILE_NAME, PATH+ano+'/'))
+# all_registers.update(MyUtil.read_file(FILE_NAME, PATH+ano+'/'))
 for ano in ANOS: 
     list_docentes_add = get_docentes(PATH+ano+'/')
     for programa in list_docentes_add:

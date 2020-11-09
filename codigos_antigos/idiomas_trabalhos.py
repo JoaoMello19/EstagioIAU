@@ -51,8 +51,6 @@ def get_trabalhos_idiomas(trabalhos):
 
     })
 
-    pass
-
 
 list_programas = read_programas()
 list_tcc = group_trabalhos()
