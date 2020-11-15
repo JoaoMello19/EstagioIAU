@@ -26,6 +26,9 @@ class Producao:
 
     def add_detalhamento(self, nome, valor):
         self.detalhamentos[convert_ascii(nome)] = convert_ascii(valor)
+        if nome == 'Cidade' and 'PERIÓDICO' in self.subtipo_producao:
+            # print(f'Hello2 {convert_ascii(nome)}')
+            pass
 
     def add_autor(self, nome, categoria, ordem):
         self.autores[convert_ascii(nome)] = {

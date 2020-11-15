@@ -4,7 +4,7 @@ import plotly.graph_objs as go
 import MyUtil, MyClasses
 from collections import defaultdict
 
-PATH = 'dados_arquitetura_2017/'
+PATH = 'dados_arquitetura_2016/'
 TIPO_QUALIS = ('A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'B5', 'C', 'NA', 'NP')
 PESO_QUALIS = {'A1': 1, 'A2': 0.875, 'A3': 0.75, 'A4': 0.625, 'B1': 0.5, 'B2': 0.2, 'B3': 0.1, 'B4': 0.05, 'B5': 0,
                'C': 0, 'NA': 0, 'NP': 0}

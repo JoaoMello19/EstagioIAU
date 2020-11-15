@@ -12,6 +12,7 @@ def join_same_productions(registers):
             else:
                 all_prod.append(same_prod[:])
                 same_prod.clear()
+                same_prod.append(register)
         else:
             same_prod.append(register)
 
@@ -97,22 +98,24 @@ def write_arq(file_name, titles, details, productions):
 # inicio do programa principal
 FILE_NAME = 'producoes_intelectuais.xlsx'
 SHEET_NAME = 'Produção Intelectual'
-PATH = 'dados_arquitetura_2017/'
 
-all_registers = MyUtil.open_large_xls(FILE_NAME, SHEET_NAME, PATH)      # abrindo o arquivo
+for i in range(2016, 2020):
+    PATH = f'dados_arquitetura_{i}/'
 
-original_titles = [MyUtil.convert_ascii(t) for t in all_registers[0][:16]]       # comprehension
-del all_registers[0]    # remove os titulos dos registros
+    all_registers = MyUtil.open_large_xls(FILE_NAME, SHEET_NAME, PATH)      # abrindo o arquivo
 
-text_productions = join_same_productions(all_registers)     # une os registros da mesma produção (arrays)
-list_productions = convert_to_object(text_productions)      # lista com as produções formatadas (objetos)
+    original_titles = [MyUtil.convert_ascii(t) for t in all_registers[0][:16]]       # comprehension
+    del all_registers[0]    # remove os titulos dos registros
 
-# processo de separação das conferências e periódicos
-conferencias, periodicos = get_productions(list_productions)
-list_productions.clear()    # libera a lista com todos os registros
+    text_productions = join_same_productions(all_registers)     # une os registros da mesma produção (arrays)
+    list_productions = convert_to_object(text_productions)      # lista com as produções formatadas (objetos)
 
-det_conf = sorted(get_detalhamentos(conferencias))  # detalhamentos das conferencias
-write_arq(PATH + 'conferencias.tsv', original_titles, det_conf, conferencias)  # escreve as conferencias
+    # processo de separação das conferências e periódicos
+    conferencias, periodicos = get_productions(list_productions)
+    list_productions.clear()    # libera a lista com todos os registros
 
-det_peri = sorted(get_detalhamentos(periodicos))
-write_arq(PATH + 'periodicos.tsv', original_titles, det_peri, periodicos)
+    det_conf = sorted(get_detalhamentos(conferencias))  # detalhamentos das conferencias
+    write_arq(PATH + 'conferencias.tsv', original_titles, det_conf, conferencias)  # escreve as conferencias
+
+    det_peri = sorted(get_detalhamentos(periodicos))
+    write_arq(PATH + 'periodicos.tsv', original_titles, det_peri, periodicos)
