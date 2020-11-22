@@ -1,18 +1,18 @@
 import plotly.offline as py
 import plotly.graph_objs as go
 
-import MyUtil
-import MyClasses
+import MyUtil, MyClasses
 from collections import defaultdict
 
-PATH = 'dados_arquitetura_2017/'
+PATH = 'dados_arquitetura_'
+ANOS = {'2013', '2014', '2015', '2016'}
 COLORS = {'total': '#0000ff', 'publicacao': '#00FF00', 'periodico': '#FF0000', 'primeiro_autor': '#FFFF00'}
 TITLES = {'total': '', 'publicacao': 'com Publicação', 'periodico': 'com Periódico',
           'primeiro_autor': 'com Periódico como Primeiro Autor'}
 
 
-def read_trabalhos():
-    registers = MyUtil.read_file('trabalhos_conclusao.xlsx', PATH)
+def read_trabalhos(filepath):
+    registers = MyUtil.read_file('trabalhos_conclusao.xlsx', filepath)
     trabalhos = defaultdict(lambda: defaultdict(lambda: set()))
 
     for row in registers:
@@ -24,12 +24,16 @@ def read_trabalhos():
 
 def read_producao(file_name):
     producoes = list()
-    with open(PATH + file_name) as file:    # abre o .tsv
+    with open(file_name, encoding='Latin-1') as file:    # abre o .tsv
         for row in file:
             cells = str(row).split('\t')
-            producao = MyClasses.Periodico(*cells[:32]) if 'periodicos' in file_name \
-                else MyClasses.Conferencias(*cells[:32])
-            producao.add_authors(*cells[32:-1])
+            if 'periodicos' in file_name:
+                producao = MyClasses.Periodico(*cells[:29]) 
+                producao.add_authors(*cells[29:-1])
+            else:
+                producao = MyClasses.Conferencias(*cells[:32])
+                producao.add_authors(*cells[32:-1])
+            
             producoes.append(producao)
     del producoes[0]
     return producoes
@@ -132,16 +136,28 @@ def make_chart(chart_data, chart_title):
 def sort_dict(dict_to_sort):
     return {value[0]: value[1] for value in sorted(dict_to_sort.items(), key=lambda item: item[1]['total'])}
 
+list_trabalhos=dict()
+periodicos=[]
+conferencias=[]
+programas=dict()
 
-programas = MyUtil.read_programas(PATH)
+for ano in ANOS:             
+    list_trabalhos_add = read_trabalhos(PATH+ano+'/')
+    for programa in list_trabalhos_add:
+        if programa in list_trabalhos:
+            list_trabalhos_programa = list_trabalhos_add[programa]
+            for tipo in list_trabalhos_programa:
+                if tipo in list_trabalhos[programa]:
+                    list_trabalhos[programa][tipo].update(list_trabalhos_programa[tipo])
+                else:
+                    list_trabalhos[programa][tipo] = list_trabalhos_programa[tipo]
+        else:
+            list_trabalhos[programa] = list_trabalhos_add[programa]
+    programas.update(MyUtil.read_programas(PATH+ano+'/'))
+    periodicos.extend(read_producao(PATH+ano+'/periodicos.tsv'))
+    conferencias.extend(read_producao(PATH+ano+'/conferencias.tsv'))
+
 programas_nivel = MyUtil.read_programas_nivel()
-
-# trabalhos de conclusao
-list_trabalhos = read_trabalhos()
-
-# publicacoes
-conferencias = read_producao('conferencias.tsv')
-periodicos = read_producao('periodicos.tsv')
 
 # autores das publicacoes
 autores_conferencias = get_autores(conferencias)
@@ -155,5 +171,7 @@ doutores_formandos = sort_dict(get_formandos(list_trabalhos, 'doutores'))
 
 mestres_formandos = sort_dict(get_formandos(list_trabalhos, 'mestres'))
 
-make_chart(doutores_formandos, 'Doutores Formandos')
-make_chart(mestres_formandos, 'Mestres Formandos')
+
+
+make_chart(doutores_formandos, 'Doutores Formandos - '+','.join(ANOS))
+make_chart(mestres_formandos, 'Mestres Formandos - '+','.join(ANOS))

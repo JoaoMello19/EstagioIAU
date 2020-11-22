@@ -25,10 +25,13 @@ class Producao:
         self.autores = OrderedDict()  # nome_autor: ordem_autor (mantem a ordem)
 
     def add_detalhamento(self, nome, valor):
-        self.detalhamentos[convert_ascii(nome)] = convert_ascii(valor)
-        if nome == 'Cidade' and 'PERIÓDICO' in self.subtipo_producao:
-            # print(f'Hello2 {convert_ascii(nome)}')
-            pass
+        if 'PERIÓDICO' in self.subtipo_producao:
+            if nome != 'Cidade' and convert_ascii(nome) != 'Número do DOI' and nome != 'URL do DOI':
+                self.detalhamentos[convert_ascii(nome)] = convert_ascii(valor)
+        else:
+            if nome != 'ISBN':
+                self.detalhamentos[convert_ascii(nome)] = convert_ascii(valor)
+
 
     def add_autor(self, nome, categoria, ordem):
         self.autores[convert_ascii(nome)] = {
@@ -68,9 +71,9 @@ class Periodico:
         self.calendario, self.ano_calendario, self.data_hora_envio, self.codigo_ppg, self.nome_ppg, \
             self.area_avaliacao, self.sigla_ies, self.nome_ies, self.ano_producao, self.titulo_producao, \
             self.producao_glosada, self.tipo_producao, self.subtipo_producao, self.area_concentracao, \
-            self.linha_pesquisa, self.projeto_pesquisa, self.cidade, self.doi, self.divulgacao, self.fasciculo, \
+            self.linha_pesquisa, self.projeto_pesquisa, self.doi, self.divulgacao, self.fasciculo, \
             self.issn_titulo_periodico, self.idioma, self.natureza, self.nome_editora, self.numero_pagina_final, \
-            self.numero_pagina_incial, self.numero_doi, self.observacao, self.serie, self.url, self.url_doi, \
+            self.numero_pagina_incial, self.observacao, self.serie, self.url, \
             self.volume = args
         self.authors = list()
 
