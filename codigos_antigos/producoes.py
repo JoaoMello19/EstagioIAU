@@ -4,7 +4,8 @@ import plotly.graph_objs as go
 import MyUtil, MyClasses
 from collections import defaultdict
 
-PATH = 'dados_arquitetura_2016/'
+ANOS = ['2013', '2014', '2015', '2016']
+PATH = 'dados_arquitetura_'
 TIPO_QUALIS = ('A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'B5', 'C', 'NA', 'NP')
 PESO_QUALIS = {'A1': 1, 'A2': 0.875, 'A3': 0.75, 'A4': 0.625, 'B1': 0.5, 'B2': 0.2, 'B3': 0.1, 'B4': 0.05, 'B5': 0,
                'C': 0, 'NA': 0, 'NP': 0}
@@ -20,22 +21,22 @@ def new_quali_dict():
     return quali_dict
 
 
-def read_periodicos():
+def read_periodicos(filepath):
     # leitura dos periodicos
     periodicos = list()
-    with open(PATH + 'periodicos.tsv') as file:
+    with open(filepath + 'periodicos.tsv', encoding='Latin-1') as file:
         for row in file:
             cells = str(row).split('\t')
-            new_periodico = MyClasses.Periodico(*cells[:32])
-            new_periodico.add_authors(*cells[32:-1])
+            new_periodico = MyClasses.Periodico(*cells[:29])
+            new_periodico.add_authors(*cells[29:-1])
             periodicos.append(new_periodico)
     del periodicos[0]
     return periodicos
 
 
-def read_conferencias():
+def read_conferencias(filepath):
     conferencias = list()
-    with open(PATH + 'conferencias.tsv') as file:
+    with open(filepath + 'conferencias.tsv', encoding='Latin-1') as file:
         for row in file:
             cells = str(row).split('\t')
             new_conferencia = MyClasses.Conferencias(*cells[:32])
@@ -46,14 +47,14 @@ def read_conferencias():
 
 
 def read_qualis():
-    with open('qualis-2017-2018.tsv') as file:
+    with open('qualis-2017-2018.tsv', encoding='Latin-1') as file:
         qualis = [MyClasses.Quali(*str(row).split('\t')) for row in file]
     del qualis[0]
     return qualis
 
 
-def read_docentes():
-    registers = MyUtil.read_file('docentes.xlsx', path=PATH)
+def read_docentes(filepath):
+    registers = MyUtil.read_file('docentes.xlsx', path=filepath)
     docentes = defaultdict(lambda: list())
 
     for row in registers:
@@ -189,14 +190,25 @@ def make_chart(chart_data, chart_title):
     fig = go.Figure(data=data, layout=layout)
     py.iplot(fig)
 
+list_periodicos=[]
+list_conferencias=[]
+list_docentes=dict()
+programas=dict()
 
 # dados lidos
-programas = MyUtil.read_programas(PATH)
+for ano in ANOS:
+    programas.update(MyUtil.read_programas(PATH+ano+'/'))
+    list_periodicos.extend(read_periodicos(PATH+ano+'/'))
+    list_conferencias.extend(read_conferencias(PATH+ano+'/'))
+    list_docentes_add = read_docentes(PATH+ano+'/')
+    for programa in list_docentes_add:
+        if programa in list_docentes:
+            list_docentes[programa].extend(list_docentes_add[programa])
+        else:
+            list_docentes[programa] = list_docentes_add[programa]
+
 programas_nivel = MyUtil.read_programas_nivel()
-list_periodicos = read_periodicos()
-list_conferencias = read_conferencias()
 list_qualis = read_qualis()
-list_docentes = read_docentes()
 
 # dados processados
 docente_programa = get_docentes_programas(list_docentes)
@@ -211,10 +223,10 @@ conferencias_docente = sort_dict(get_publicacoes_docente(conferencias_qualis, do
 conferencias_permanente = sort_dict(get_publicacoes_permanente(conferencias_qualis, docente_programa))
 conferencias_qualis = sort_dict(conferencias_qualis)  # ordena depois, pois a lista é utilizada em outro método
 
-make_chart(periodicos_qualis, 'Periódicos por Qualis')
-make_chart(periodicos_docente, 'Periódicos por Docentes (Permanentes + Colaboradores)')
-make_chart(periodicos_permanente, 'Periódicos por Docentes Permanentes')
+make_chart(periodicos_qualis, 'Periódicos por Qualis - '+','.join(ANOS))
+make_chart(periodicos_docente, 'Periódicos por Docentes (Permanentes + Colaboradores) - '+','.join(ANOS))
+make_chart(periodicos_permanente, 'Periódicos por Docentes Permanentes - '+','.join(ANOS))
 
-make_chart(conferencias_qualis, 'Conferências por Qualis')
-make_chart(conferencias_docente, 'Conferências por Docentes (Permanentes + Colaboradores)')
-make_chart(conferencias_permanente, 'Conferências por Docentes Permanentes')
+make_chart(conferencias_qualis, 'Conferências por Qualis - '+','.join(ANOS))
+make_chart(conferencias_docente, 'Conferências por Docentes (Permanentes + Colaboradores) - '+','.join(ANOS))
+make_chart(conferencias_permanente, 'Conferências por Docentes Permanentes - '+','.join(ANOS))
