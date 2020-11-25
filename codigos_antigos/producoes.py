@@ -1,10 +1,11 @@
 import plotly.offline as py
 import plotly.graph_objs as go
 
-import MyUtil, MyClasses
+import MyUtil
+import MyClasses
 from collections import defaultdict
 
-PATH = 'dados_arquitetura_2016/'
+PATH = 'dados_arquitetura_2019/'
 TIPO_QUALIS = ('A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'B5', 'C', 'NA', 'NP')
 PESO_QUALIS = {'A1': 1, 'A2': 0.875, 'A3': 0.75, 'A4': 0.625, 'B1': 0.5, 'B2': 0.2, 'B3': 0.1, 'B4': 0.05, 'B5': 0,
                'C': 0, 'NA': 0, 'NP': 0}
@@ -26,8 +27,8 @@ def read_periodicos():
     with open(PATH + 'periodicos.tsv') as file:
         for row in file:
             cells = str(row).split('\t')
-            new_periodico = MyClasses.Periodico(*cells[:32])
-            new_periodico.add_authors(*cells[32:-1])
+            new_periodico = MyClasses.Periodico(*cells[:29])
+            new_periodico.add_authors(*cells[29:-1])
             periodicos.append(new_periodico)
     del periodicos[0]
     return periodicos

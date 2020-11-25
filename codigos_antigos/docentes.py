@@ -4,7 +4,7 @@ from collections import defaultdict
 
 FILE_NAME = 'docentes.xlsx'
 PATH = 'dados_arquitetura_'
-ANOS = {'2017', '2018', '2019'}
+ANOS = ['2019']
 
 
 def get_docentes(filepath):
@@ -131,9 +131,9 @@ def sort_dict(dict_to_sort):
     return {value[0]: value[1] for value in sorted(sorted_dict.items(), key=lambda item: item[1]['total'])}
 
 
-all_registers=dict()
-list_docentes=dict()
-programas=dict()
+all_registers = dict()
+list_docentes = dict()
+programas = dict()
 
 # all_registers.update(MyUtil.read_file(FILE_NAME, PATH+ano+'/'))
 for ano in ANOS: 

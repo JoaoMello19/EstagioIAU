@@ -7,6 +7,7 @@ from collections import defaultdict
 PATH = 'dados_arquitetura_'
 ANOS = {'2013', '2014', '2015', '2016'}
 
+
 def read_trabalhos(filepath):
     registers = MyUtil.read_file('trabalhos_conclusao.xlsx', filepath)
     trabalhos = defaultdict(lambda: defaultdict(lambda: set()))
@@ -50,7 +51,6 @@ def get_docentes_programa(p_code):
         elif names_categories[docente['name']] not in ('BOTH', docente['category']):
             # registrado como outra categoria -> pertence a ambas
             names_categories[docente['name']] = 'BOTH'
-    
 
     docentes_programa = {'PERMANENTE': 0, 'COLABORADOR': 0, 'total': 0}
     for category in names_categories.values():
@@ -145,9 +145,9 @@ def sort_dict(dict_to_sort):
     return {value[0]: value[1] for value in sorted(dict_to_sort.items(), key=lambda item: item[1])}
 
 
-list_trabalhos=dict()
-list_docentes=dict()
-programas=dict()
+list_trabalhos = dict()
+list_docentes = dict()
+programas = dict()
 
 for ano in ANOS: 
     list_docentes_add = read_docentes(PATH+ano+'/')
