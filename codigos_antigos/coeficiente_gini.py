@@ -4,13 +4,14 @@ import plotly.graph_objs as go
 import MyUtil
 from collections import defaultdict
 
-FILE_NAME = 'periodicos.tsv'
+FILE_PERIODICOS = 'periodicos.tsv'
+FILE_CONFFERENCIAS = 'conferencias.tsv'
 FILE_PATH = 'dados_arquitetura_'
 ANOS = range(2013, 2020)
 
 
-def read_publicacao(path, file_name):
-    with open(path + file_name, encoding='latin-1') as linhas:
+def read_publicacao(path, FILE_PERIODICOS):
+    with open(path + FILE_PERIODICOS, encoding='latin-1') as linhas:
         publicacoes = [linha.split('\t') for linha in linhas]
         del publicacoes[0]  # sem os titulos das colunas
         for publicacao in publicacoes:
@@ -18,10 +19,19 @@ def read_publicacao(path, file_name):
         return publicacoes
 
 
-def get_autores_programas(publicacoes):
+def get_autores_periodicos(publicacoes):
     autores = defaultdict(lambda: [])
     for p in publicacoes:
         for i in range(29, len(p), 2):
+            if p[i + 1] == 'Docente':
+                autores[p[3]].append(p[i])
+    return autores
+
+
+def get_autores_conferencias(publicacoes):
+    autores = defaultdict(lambda: [])
+    for p in publicacoes:
+        for i in range(32, len(p), 2):
             if p[i + 1] == 'Docente':
                 autores[p[3]].append(p[i])
     return autores
@@ -86,13 +96,21 @@ def make_chart(chart_data, chart_title):
     py.iplot(fig)
 
 
+programas_nivel = MyUtil.read_programas_nivel()
+nomes_programas = dict()
+periodicos = []
+conferencias = []
+autores = {'Periódicos': [], 'Conferências': []}
+
 for ANO in ANOS:
-    nomes_programas = MyUtil.read_programas(FILE_PATH + str(ANO) + '/')
-    programas_nivel = MyUtil.read_programas_nivel()
+    nomes_programas.update(MyUtil.read_programas(FILE_PATH + str(ANO) + '/'))
+    periodicos.extend(read_publicacao(FILE_PATH + str(ANO) + '/', FILE_PERIODICOS))
+    conferencias.extend(read_publicacao(FILE_PATH + str(ANO) + '/', FILE_CONFFERENCIAS))
 
-    periodicos = read_publicacao(FILE_PATH + str(ANO) + '/', FILE_NAME)
-    autores_programas = get_autores_programas(periodicos)
-    ginis = {set_code(ap[0]): get_gini_programa(ap[1]) for ap in autores_programas.items()}
+autores['Periódicos'] = get_autores_periodicos(periodicos)
+autores['Conferências'] = get_autores_conferencias(conferencias)
+
+for tipo in ('Periódicos', 'Conferências'):
+    ginis = {set_code(ap[0]): get_gini_programa(ap[1]) for ap in autores[tipo].items()}
     ginis = sort_dict(ginis)
-
-    make_chart(ginis, f"Coeficiente Gini {ANO}")
+    make_chart(ginis, f"Gini da Distribuição de {tipo} {tuple(ANOS)}")
