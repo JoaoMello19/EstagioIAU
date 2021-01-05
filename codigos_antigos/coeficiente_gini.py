@@ -10,8 +10,8 @@ FILE_PATH = 'dados_arquitetura_'
 ANOS = range(2013, 2020)
 
 
-def read_publicacao(path, FILE_PERIODICOS):
-    with open(path + FILE_PERIODICOS, encoding='latin-1') as linhas:
+def read_publicacao(path, file_name):
+    with open(path + file_name, encoding='latin-1') as linhas:
         publicacoes = [linha.split('\t') for linha in linhas]
         del publicacoes[0]  # sem os titulos das colunas
         for publicacao in publicacoes:
@@ -20,21 +20,21 @@ def read_publicacao(path, FILE_PERIODICOS):
 
 
 def get_autores_periodicos(publicacoes):
-    autores = defaultdict(lambda: [])
+    authores = defaultdict(lambda: [])
     for p in publicacoes:
         for i in range(29, len(p), 2):
             if p[i + 1] == 'Docente':
-                autores[p[3]].append(p[i])
-    return autores
+                authores[p[3]].append(p[i])
+    return authores
 
 
 def get_autores_conferencias(publicacoes):
-    autores = defaultdict(lambda: [])
+    authores = defaultdict(lambda: [])
     for p in publicacoes:
         for i in range(32, len(p), 2):
             if p[i + 1] == 'Docente':
-                autores[p[3]].append(p[i])
-    return autores
+                authores[p[3]].append(p[i])
+    return authores
 
 
 def sort_dict(to_sort):
@@ -44,23 +44,23 @@ def sort_dict(to_sort):
     return aux
 
 
-def get_gini_programa(autores_programa):
+def get_gini_programa(authores_programa):
     freq_nome = defaultdict(lambda: 0)  # frequencia de aparição de cada nome
-    for nome in autores_programa:
+    for nome in authores_programa:
         freq_nome[nome] += 1
     freq_nome = list(sort_dict(freq_nome).values())
 
-    X = [0]
-    X.extend([n / len(freq_nome) for n in range(len(freq_nome))])   # freq acumulada de populacao
+    x = [0]
+    x.extend([n / len(freq_nome) for n in range(len(freq_nome))])   # freq acumulada de populacao
 
     total = sum(freq_nome)
-    Y = [0]
+    y = [0]
     for i in range(len(freq_nome)):
-        Y.append(Y[i] + freq_nome[i] / total)               # freq acumulada de ocorrencia
+        y.append(y[i] + freq_nome[i] / total)               # freq acumulada de ocorrencia
 
     gini = 1
     for i in range(len(freq_nome)):
-        gini -= (X[i + 1] - X[i]) * (Y[i + 1] - Y[i])
+        gini -= (x[i + 1] - x[i]) * (y[i + 1] - y[i])
 
     return round(gini, 2)
 
