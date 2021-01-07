@@ -84,7 +84,7 @@ def read_file(file_name, path=''):
     extension = file_name.split('.')[-1]
     if extension == 'xlsx':
         return read_xlsx(file_name, path=path)
-    elif extension == 'csv':
+    elif extension == 'csv' or extension == 'tsv':
         return read_csv(file_name, path=path)
     else:
         print('Arquivo não suportado...')
