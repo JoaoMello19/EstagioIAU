@@ -4,7 +4,7 @@ from collections import defaultdict
 
 FILE_NAME = 'docentes.xlsx'
 PATH = 'dados_arquitetura_'
-ANOS = ['2019']
+ANOS = ['2017']
 
 
 def get_docentes(filepath):
@@ -16,14 +16,18 @@ def get_docentes(filepath):
 
     docentes = defaultdict(lambda: list())
     for row in registers:
-        docentes[row[3]].append({
+        docente = {
             'name': row[8],
             'category': row[12]
-        })
+        }
+        
+        if docente not in docentes[row[3]]:
+            docentes[row[3]].append(docente)
+        
 
     return docentes
 
-
+#método antigo de calcular a media
 def get_docentes_programa(p_code):
     """
     Função que avalia e calcula a média de docentes por categoria
@@ -78,7 +82,43 @@ def get_docentes_programas(docentes):
         doc_prog[new_code]['total'] += d_programa['PERMANENTE'] + d_programa['COLABORADOR']
 
     return doc_prog
+##
 
+#método alternativo para calcular a média considerando mais de dois anos
+def get_docentes_programa_alt(p_code):
+    docentes_programa = {'PERMANENTE': 0, 'COLABORADOR': 0, 'total': 0}
+    for docente in p_code: 
+        if docente['category'] in ['PERMANENTE', 'COLABORADOR']:
+            docentes_programa[docente['category']] += 1
+        
+    docentes_programa['total'] = docentes_programa['PERMANENTE'] + docentes_programa['COLABORADOR']
+
+    return docentes_programa
+
+def get_media_docentes_programas(docentes):
+
+    codes = {code for code in docentes.keys()}
+    doc_prog = defaultdict(lambda: {
+        'PERMANENTE': 0,
+        'COLABORADOR': 0,
+        'total': 0
+    })
+
+    for code in codes:
+        d_programa = get_docentes_programa_alt(docentes[code])
+
+        new_code = code
+        if code in programas_nivel.keys():
+            new_code = programas_nivel[code]
+        elif code in programas.keys():
+            new_code = programas[code]
+
+        doc_prog[new_code]['PERMANENTE'] = d_programa['PERMANENTE']/len(ANOS)
+        doc_prog[new_code]['COLABORADOR'] = d_programa['COLABORADOR']/len(ANOS)
+        doc_prog[new_code]['total'] = d_programa['PERMANENTE'] + d_programa['COLABORADOR']
+
+    return doc_prog
+###
 
 def make_chart(chart_data):
     """
@@ -91,11 +131,15 @@ def make_chart(chart_data):
 
     trace_perm = go.Bar(x=list(chart_data.keys()),
                         y=[f_d['PERMANENTE'] for f_d in chart_data.values()],
+                        text=['<b>'+'{0:.2f}'.format(f_d['PERMANENTE'])+'</b>' for f_d in chart_data.values()],
+                        textposition='inside',
                         name='PERMANENTE',
                         marker={'color': '#FF0000'})
 
     trace_colab = go.Bar(x=list(chart_data.keys()),
                          y=[f_d['COLABORADOR'] for f_d in chart_data.values()],
+                         text=['<b>'+'{0:.2f}'.format(f_d['COLABORADOR'])+'</b>' for f_d in chart_data.values()],
+                         textposition='outside',
                          name='COLABORADOR',
                          marker={'color': '#0000FF'})
 
@@ -121,7 +165,9 @@ def make_chart(chart_data):
     layout = go.Layout(title=title,
                        xaxis={'title': 'Instituição'},
                        barmode='stack',
-                       legend=subtitle)
+                       legend=subtitle,
+                       height=1000,
+                       width=2300)
     fig = go.Figure(data=data, layout=layout)
     py.iplot(fig)
 
@@ -146,5 +192,9 @@ for ano in ANOS:
     programas.update(MyUtil.read_programas(PATH+ano+'/'))
 
 programas_nivel = MyUtil.read_programas_nivel()
-docentes_programas = sort_dict(get_docentes_programas(list_docentes))
+#antigo
+#docentes_programas = sort_dict(get_docentes_programas(list_docentes))
+#novo
+docentes_programas = sort_dict(get_media_docentes_programas(list_docentes))
+
 make_chart(docentes_programas)

@@ -69,7 +69,7 @@ def make_chart(chart_data):
         fig.add_trace(go.Bar(x=list(chart_data.keys()),
                         y=[f_d[idioma+' %'] for f_d in chart_data.values()],
                         name= idioma+' %',
-                        text=['<b>'+'{0:.2f}'.format(f_d[idioma+' %'])+'</b>' for f_d in chart_data.values()],
+                        text=['<b>'+str(f_d[idioma])+' <br>('+'{0:.2f}'.format(f_d[idioma+' %'])+'%)</b>' for f_d in chart_data.values()],
                         textposition='inside',
                         insidetextanchor = 'middle',
                         textfont_size=20,

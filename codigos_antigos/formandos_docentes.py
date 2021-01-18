@@ -5,8 +5,7 @@ import MyUtil
 from collections import defaultdict
 
 PATH = 'dados_arquitetura_'
-ANOS = {'2013', '2014', '2015', '2016'}
-
+ANOS = ['2013', '2014', '2015', '2016']
 
 def read_trabalhos(filepath):
     registers = MyUtil.read_file('trabalhos_conclusao.xlsx', filepath)
@@ -28,10 +27,13 @@ def read_docentes(filepath):
 
     docentes = defaultdict(lambda: list())
     for row in registers:
-        docentes[row[3]].append({
+        docente = {
             'name': row[8],
             'category': row[12]
-        })
+        }
+        
+        if docente not in docentes[row[3]]:
+            docentes[row[3]].append(docente)
 
     return docentes
 
@@ -51,6 +53,7 @@ def get_docentes_programa(p_code):
         elif names_categories[docente['name']] not in ('BOTH', docente['category']):
             # registrado como outra categoria -> pertence a ambas
             names_categories[docente['name']] = 'BOTH'
+    
 
     docentes_programa = {'PERMANENTE': 0, 'COLABORADOR': 0, 'total': 0}
     for category in names_categories.values():
@@ -85,6 +88,35 @@ def get_docentes_programas(docentes):
 
     return doc_prog
 
+#método alternativo para calcular a média considerando mais de dois anos
+def get_docentes_programa_alt(p_code):
+    docentes_programa = {'PERMANENTE': 0, 'COLABORADOR': 0, 'total': 0}
+    for docente in p_code: 
+        if docente['category'] in ['PERMANENTE', 'COLABORADOR']:
+            docentes_programa[docente['category']] += 1
+        
+    docentes_programa['total'] = docentes_programa['PERMANENTE'] + docentes_programa['COLABORADOR']
+
+    return docentes_programa
+
+def get_media_docentes_programas(docentes):
+
+    codes = {code for code in docentes.keys()}
+    doc_prog = defaultdict(lambda: {
+        'PERMANENTE': 0,
+        'COLABORADOR': 0,
+        'total': 0
+    })
+    
+    for code in codes:
+        d_programa = get_docentes_programa_alt(docentes[code])
+        doc_prog[code]['PERMANENTE'] = d_programa['PERMANENTE']/len(ANOS)
+        doc_prog[code]['COLABORADOR'] = d_programa['COLABORADOR']/len(ANOS)
+        doc_prog[code]['total'] = d_programa['PERMANENTE'] + d_programa['COLABORADOR']
+
+    return doc_prog
+###
+
 
 def get_formandos_by(trabalhos, t_formandos):
     result = defaultdict(lambda: list())
@@ -105,7 +137,6 @@ def get_formandos_docentes(trabalhos, t_formandos, docentes, t_docentes='total')
     formandos = get_formandos_by(trabalhos, 'TESE' if t_formandos == 'doutores' else 'DISSERTAÇÃO')     # {code: nomes}
     count_formandos = {code: len(nomes) for code, nomes in formandos.items()}                           # {code: count}
     docentes_t = get_docentes_by(docentes, t_docentes)
-
     formandos_docentes = defaultdict(lambda: 0)
     for code in formandos.keys():
         new_code = code
@@ -113,7 +144,6 @@ def get_formandos_docentes(trabalhos, t_formandos, docentes, t_docentes='total')
             new_code = programas_nivel[code]
         elif code in programas.keys():
             new_code = programas[code]
-
         formandos_docentes[new_code] += count_formandos[code] / docentes_t[code]
 
     return formandos_docentes
@@ -122,6 +152,8 @@ def get_formandos_docentes(trabalhos, t_formandos, docentes, t_docentes='total')
 def make_chart(chart_data, chart_title):
     data = [go.Bar(x=[code for code in chart_data.keys()],
                    y=[value for value in chart_data.values()],
+                   text=['<b>'+'{0:.2f}'.format(value)+'</b>' for value in chart_data.values()],
+                   textposition='outside',
                    marker={'color': '#0000FF'})]
 
     title = {
@@ -145,9 +177,9 @@ def sort_dict(dict_to_sort):
     return {value[0]: value[1] for value in sorted(dict_to_sort.items(), key=lambda item: item[1])}
 
 
-list_trabalhos = dict()
-list_docentes = dict()
-programas = dict()
+list_trabalhos=dict()
+list_docentes=dict()
+programas=dict()
 
 for ano in ANOS: 
     list_docentes_add = read_docentes(PATH+ano+'/')
@@ -172,7 +204,8 @@ for ano in ANOS:
     
 programas_nivel = MyUtil.read_programas_nivel()
 
-docentes_programas = get_docentes_programas(list_docentes)
+#docentes_programas = get_docentes_programas(list_docentes)
+docentes_programas = get_media_docentes_programas(list_docentes)
 
 doutores_docente = sort_dict(get_formandos_docentes(list_trabalhos, 'doutores', docentes_programas))
 doutores_permanente = sort_dict(get_formandos_docentes(list_trabalhos, 'doutores', docentes_programas, 'PERMANENTE'))
