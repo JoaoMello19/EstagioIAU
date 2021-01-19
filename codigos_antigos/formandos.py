@@ -1,11 +1,10 @@
 import plotly.offline as py
 import plotly.graph_objs as go
-import MyUtil
-import MyClasses
+import MyUtil, MyClasses
 from collections import defaultdict
 
 PATH = 'dados_arquitetura_'
-ANOS = ['2019']
+ANOS = ['2017', '2018', '2019']
 COLORS = {'total': '#0000ff', 'publicacao': '#00FF00', 'periodico': '#FF0000', 'primeiro_autor': '#FFFF00'}
 TITLES = {'total': '', 'publicacao': 'com Publicação', 'periodico': 'com Periódico',
           'primeiro_autor': 'com Periódico como Primeiro Autor'}
@@ -39,11 +38,11 @@ def read_producao(file_name):
     return producoes
 
 
-def get_by_type(trabalhos, tipo_t):
+def get_by_type(trabalhos, tipo):
     result = defaultdict(lambda: list())
     for code in trabalhos:
-        if len(trabalhos[code][tipo_t]) > 0:
-            result[code] = [autor for autor in trabalhos[code][tipo_t]]
+        if len(trabalhos[code][tipo]) > 0:
+            result[code] = [autor for autor in trabalhos[code][tipo]]
     return result
 
 
@@ -66,9 +65,9 @@ def get_formandos_publicacao(formandos, *autores):
     return formandos_publicacao
 
 
-def get_formandos(trabalhos, tipo_t):
+def get_formandos(trabalhos, tipo):
     # lista dos formandos
-    formandos = get_by_type(trabalhos, 'TESE' if tipo_t == 'doutores' else 'DISSERTAÇÃO')     # {code: nomes}
+    formandos = get_by_type(trabalhos, 'TESE' if tipo == 'doutores' else 'DISSERTAÇÃO')     # {code: nomes}
 
     # calculos dos tipos de agrupamento de dados
     count_formandos = {code: len(formandos) for code, formandos in formandos.items()}
@@ -105,6 +104,8 @@ def make_chart(chart_data, chart_title):
     for dado in ('primeiro_autor', 'periodico', 'publicacao', 'total'):
         data.append(go.Bar(x=list(chart_data.keys()),
                            y=[d_f[dado] for d_f in chart_data.values()],
+                           text=['<b>'+'{0:.2f}'.format(d_f[dado])+'</b>' for d_f in chart_data.values()],
+                           textposition='outside',
                            marker_color=COLORS[dado],
                            name=f'{aux_label} {TITLES[dado]}'))
 
@@ -114,7 +115,7 @@ def make_chart(chart_data, chart_title):
         'xanchor': 'center',
         'font': {
             'color': '#000000',
-            'size': 20
+            'size': 50
         }
     }
 
@@ -124,10 +125,15 @@ def make_chart(chart_data, chart_title):
         'x': 0,
         'y': 1
     }
-
+    
+    width=len(chart_data.values())*100
+    print(width)
     layout = go.Layout(title=title,
                        xaxis={'title': 'Instituição'},
-                       legend=legend)
+                       legend=legend,
+                       height=width/2,
+                       font_size=width/150,
+                       width=width)
 
     fig = go.Figure(data=data, layout=layout)
     py.iplot(fig)
@@ -136,14 +142,13 @@ def make_chart(chart_data, chart_title):
 def sort_dict(dict_to_sort):
     return {value[0]: value[1] for value in sorted(dict_to_sort.items(), key=lambda item: item[1]['total'])}
 
-
-list_trabalhos = dict()
-periodicos = []
-conferencias = []
-programas = dict()
+list_trabalhos=dict()
+periodicos=[]
+conferencias=[]
+programas=dict()
 
 for ano in ANOS:             
-    list_trabalhos_add = read_trabalhos(PATH + ano + '/')
+    list_trabalhos_add = read_trabalhos(PATH+ano+'/')
     for programa in list_trabalhos_add:
         if programa in list_trabalhos:
             list_trabalhos_programa = list_trabalhos_add[programa]
@@ -154,9 +159,9 @@ for ano in ANOS:
                     list_trabalhos[programa][tipo] = list_trabalhos_programa[tipo]
         else:
             list_trabalhos[programa] = list_trabalhos_add[programa]
-    programas.update(MyUtil.read_programas(PATH + ano + '/'))
-    periodicos.extend(read_producao(PATH + ano + '/periodicos.tsv'))
-    conferencias.extend(read_producao(PATH + ano + '/conferencias.tsv'))
+    programas.update(MyUtil.read_programas(PATH+ano+'/'))
+    periodicos.extend(read_producao(PATH+ano+'/periodicos.tsv'))
+    conferencias.extend(read_producao(PATH+ano+'/conferencias.tsv'))
 
 programas_nivel = MyUtil.read_programas_nivel()
 
@@ -169,6 +174,7 @@ primeiros_autores_periodicos = get_primeiros_autores(periodicos)
 
 # dados agrupados
 doutores_formandos = sort_dict(get_formandos(list_trabalhos, 'doutores'))
+
 mestres_formandos = sort_dict(get_formandos(list_trabalhos, 'mestres'))
 
 make_chart(doutores_formandos, f'Doutores Formandos ({", ".join(ANOS)})')
