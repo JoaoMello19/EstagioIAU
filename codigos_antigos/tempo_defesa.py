@@ -35,9 +35,14 @@ def get_code(code):
     return new_code
 
 
+def get_median(lista):
+    t = int(len(lista) / 2)
+    return sorted(lista)[t]
+
+
 def sort_dict(dict_to_sort):
-    return {get_code(value[0]): value[1] for value in sorted(dict_to_sort.items(),
-                                                             key=lambda item: sum(item[1]) / len(item[1]))}
+    pre_sort = sorted(dict_to_sort.items(), key=lambda item: get_median(item[1]))
+    return {get_code(value[0]): value[1] for value in pre_sort}
 
 
 def make_chart(chart_data, chart_title):
@@ -86,7 +91,7 @@ file_discentes.clear()
 
 trabalhos = list_to_dict([{
     'nome': row[1],
-    'nivel': 'Mestrado' if row[22] == 'DISSERTAÇÃO' else 'Doutorado',
+    'nivel': 'Mestrado' if row[22] == 'DISSERTAÇÃO' else 'Doutorado' if row[22] == 'TESE' else 'Outro',
     'programa': row[16],
     'data': row[4]
 } for row in trabalhos_conclusao])
@@ -96,7 +101,5 @@ intervalos = get_intervalos(discentes, trabalhos)
 intervalos['Mestrado'] = sort_dict(intervalos['Mestrado'])
 intervalos['Doutorado'] = sort_dict(intervalos['Doutorado'])
 
-'''for item in intervalos['Mestrado'].items():
-    print(f'{item[0]} = {sum(item[1]) / len(item[1])}')'''
-
 make_chart(sort_dict(intervalos['Mestrado']), f'Tempo até a Defesa da Dissertação {tuple(ANOS)}')
+make_chart(sort_dict(intervalos['Doutorado']), f'Tempo até a Defesa da Tese {tuple(ANOS)}')
