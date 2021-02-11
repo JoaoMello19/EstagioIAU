@@ -4,7 +4,7 @@ import plotly.graph_objs as go
 from collections import defaultdict
 
 
-ANOS = range(2013, 2014)
+ANOS = range(2013, 2020)
 
 
 def read_nomes_programas():
@@ -15,11 +15,12 @@ def read_nomes_programas():
 
 
 def read_files(file_name):
-    file_rows = []
     for ano in ANOS:
         with open(f'dados_arquitetura_{ano}/{file_name}', encoding='Latin-1') as file:
-            file_rows.extend([row.split('\t') for row in file][1:])
-    return file_rows
+            file = (row for row in file)
+            next(file)  # ignora a primeira linha
+            for row in file:
+                yield row.split('\t')
 
 
 def get_titles(rows):
@@ -41,7 +42,8 @@ def get_publicacoes_conjunto(titles):
     conjuntos = {
         set_code(key): {
             set_code(k): v for k, v in value.items()
-        } for key, value in conjuntos.items()}
+        } for key, value in conjuntos.items()
+    }
 
     return conjuntos
 
@@ -55,14 +57,12 @@ def set_code(code):
 
 
 def prepare_data(chart_data):
-    x_all = []
-    y_all = []
-    v_all = []
+    x_all, y_all, v_all = [], [], []
 
     for code in chart_data.keys():
-        x_all.extend([code for i in range(len(chart_data[code].keys()))])
-        y_all.extend(list(chart_data[code].keys()))
-        v_all.extend([v for v in chart_data[code].values()])
+        x_all.extend((code for i in range(len(chart_data[code].keys()))))
+        y_all.extend((k for k in chart_data[code].keys()))
+        v_all.extend((v for v in chart_data[code].values()))
 
     return x_all, y_all, v_all
 
@@ -80,8 +80,6 @@ def make_chart(chart_data, chart_title):
     fig = go.Figure(layout=go.Layout(title=title, legend={}))
 
     x_all, y_all, v_all = prepare_data(chart_data)
-    v_max = max(v_all)
-    unit = int(v_max / 10)
 
     fig.add_trace(go.Scatter(
         x=x_all,
